@@ -162,10 +162,27 @@ status_t ocl_gpu_kernel_t::parallel_for(stream_t &stream,
 
     cl_uint ndims = static_cast<cl_uint>(range.ndims());
     if (range.is_zero()) { return status::success; }
-    cl_int err = clEnqueueNDRangeKernel(queue, enqueue_kernel, ndims, nullptr,
-            range.global_range(), range.local_range(), 0, nullptr, nullptr);
-    status_t status = convert_to_dnnl(err);
-    return status;
+    // TODO: check that queue is OOO. Otherwise don't request return event and don't pass event list.
+
+    if (ocl_stream->flags() & stream_flags::out_of_order) {
+        const auto &events = ocl_stream->get_deps();
+        cl_uint num_events = events.size();
+        const cl_event *events_data = num_events ? events.data() : nullptr;
+        cl_event return_event;
+        cl_int err = clEnqueueNDRangeKernel(queue, enqueue_kernel, ndims, nullptr,
+                range.global_range(), range.local_range(), num_events,
+                events_data, &return_event);
+        assert(err == CL_SUCCESS);
+        ocl_stream->set_deps({return_event});
+        return convert_to_dnnl(err);
+    } else if (ocl_stream->flags() & stream_flags::in_order) {
+        assert(ocl_stream->get_deps().empty());
+        cl_int err = clEnqueueNDRangeKernel(queue, enqueue_kernel, ndims, nullptr,
+                range.global_range(), range.local_range(), 0, nullptr, nullptr);
+        assert(err == CL_SUCCESS);
+        return convert_to_dnnl(err);
+    }
+    return status::success;
 }
 
 status_t ocl_gpu_kernel_t::realize(compute::kernel_t *kernel,
