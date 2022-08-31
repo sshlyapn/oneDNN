@@ -37,8 +37,8 @@ status_t ocl_stream_t::init() {
     assert(engine()->kind() == engine_kind::gpu);
 
     // Out-of-order is not supported
-    bool args_ok = (flags() & stream_flags::out_of_order) == 0;
-    if (!args_ok) return status::unimplemented;
+    //bool args_ok = (flags() & stream_flags::out_of_order) == 0;
+    //if (!args_ok) return status::unimplemented;
 
     ocl_gpu_engine_t *ocl_engine
             = utils::downcast<ocl_gpu_engine_t *>(engine());

@@ -62,6 +62,13 @@ struct ocl_stream_t : public compute::compute_stream_t {
         return status::success;
     }
 
+    status_t set_deps(const std::vector<cl_event> &events) {
+        events_ = events;
+        return status::success;
+    }
+
+    const std::vector<cl_event> &get_deps() const { return events_; }
+
     status_t wait() override {
         OCL_CHECK(clFinish(queue_));
         return status::success;
@@ -78,6 +85,19 @@ struct ocl_stream_t : public compute::compute_stream_t {
     ~ocl_stream_t() override {
         wait();
         if (queue_) { clReleaseCommandQueue(queue_); }
+    }
+
+    status_t cleanup() override {
+        if (flags() & stream_flags::out_of_order) {
+            if (events_.size() != 1) {
+                assert(!"unexpected");
+                return status::runtime_error;
+            }
+            cl_uint err = clReleaseEvent(events_[0]);
+            assert(err == CL_SUCCESS);
+            return convert_to_dnnl(err);
+        }
+        return status::success;
     }
 
 private:
@@ -103,6 +123,7 @@ private:
 
 private:
     cl_command_queue queue_;
+    std::vector<cl_event> events_;
 };
 
 } // namespace ocl

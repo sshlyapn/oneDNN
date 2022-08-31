@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2016-2020 Intel Corporation
+* Copyright 2016-2021 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -52,6 +52,10 @@ struct dnnl_stream : public dnnl::impl::c_compatible {
 
     virtual dnnl::impl::status_t zero_pad(const dnnl::impl::memory_t *memory,
             const dnnl::impl::exec_ctx_t &ctx);
+
+    virtual dnnl::impl::status_t cleanup() {
+        return dnnl::impl::status::success;
+    }
 
 #if DNNL_CPU_RUNTIME == DNNL_RUNTIME_THREADPOOL
     dnnl_stream(dnnl::impl::engine_t *engine,

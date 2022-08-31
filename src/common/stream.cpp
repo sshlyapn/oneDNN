@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2016-2020 Intel Corporation
+* Copyright 2016-2021 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ using namespace dnnl::impl;
 using namespace dnnl::impl::status;
 using namespace dnnl::impl::utils;
 
+// TODO: add enqueue_primitive to ocl_stream and check if
 status_t stream_t::enqueue_primitive(
         const primitive_iface_t *primitive_iface, exec_ctx_t &ctx) {
     return primitive_iface->execute(ctx);

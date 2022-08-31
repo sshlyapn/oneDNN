@@ -269,6 +269,7 @@ status_t ocl_gpu_engine_t::create_kernels_from_ocl_source(
 
     cl_device_id dev = device();
     err = clBuildProgram(program, 1, &dev, options.c_str(), nullptr, nullptr);
+//     printf("Build options3 %s\n", options.c_str());
     OCL_CHECK(maybe_print_debug_info(err, program, dev));
 
     std::shared_ptr<compute::binary_t> shared_binary;

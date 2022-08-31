@@ -221,6 +221,24 @@ inline memory make_memory(const memory::desc &memory_desc,
     return amemory;
 }
 
+inline cl_event execute(const dnnl::primitive &aprimitive,
+        const stream &astream, const std::unordered_map<int, memory> &args,
+        const std::vector<cl_event> &deps = {}) {
+    std::vector<dnnl_exec_arg_t> c_args;
+    c_args.reserve(args.size());
+    for (const auto &a : args)
+        c_args.push_back({a.first, a.second.get()});
+
+    const cl_event *c_deps = deps.empty() ? nullptr : deps.data();
+
+    cl_event return_event;
+    error::wrap_c_api(dnnl_ocl_interop_primitive_execute(aprimitive.get(),
+                              astream.get(), (int)c_args.size(), c_args.data(),
+                              c_deps, (int)deps.size(), &return_event),
+            "could not execute a primitive");
+    return return_event;
+}
+
 } // namespace ocl_interop
 
 /// @} dnnl_api_ocl_interop

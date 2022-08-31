@@ -33,6 +33,7 @@ status_t dnnl_ocl_interop_stream_create(
     bool args_ok = !utils::any_null(stream, engine, queue)
             && engine->runtime_kind() == runtime_kind::ocl;
 
+//     printf("args_ok %d\n", args_ok);
     if (!args_ok) return status::invalid_arguments;
 
     auto *ocl_engine = utils::downcast<ocl_gpu_engine_t *>(engine);

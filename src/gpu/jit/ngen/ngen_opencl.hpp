@@ -77,6 +77,7 @@ static inline std::vector<uint8_t> getOpenCLCProgramBinary(cl_context context, c
         throw opencl_error();
 
     detail::handleCL(clBuildProgram(program, 1, &device, options, nullptr, nullptr));
+    // printf("Build options2 %s\n", options);
     size_t nDevices = 0;
     detail::handleCL(clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(size_t), &nDevices, nullptr));
     std::vector<cl_device_id> devices(nDevices);
@@ -153,6 +154,7 @@ cl_kernel OpenCLCodeGenerator<hw>::getKernel(cl_context context, cl_device_id de
             continue;
 
         status = clBuildProgram(program, 1, &device, options.c_str(), nullptr, nullptr);
+        // printf("Build options %s\n", options.c_str());
 
         good = (status == CL_SUCCESS);
         if (good)

@@ -231,4 +231,71 @@ TEST_F(ocl_stream_test_cpp_t, InteropIncompatibleQueueCpp) {
     TEST_OCL_CHECK(clReleaseCommandQueue(cpu_ocl_queue));
 }
 
+TEST_F(ocl_stream_test_cpp_t, out_of_order_queue) {
+    SKIP_IF(!find_ocl_device(CL_DEVICE_TYPE_GPU),
+            "OpenCL GPU devices not found.");
+
+    cl_int err;
+
+#ifdef CL_VERSION_2_0
+    cl_queue_properties properties[]
+            = {CL_QUEUE_PROPERTIES, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, 0};
+    cl_command_queue ocl_queue = clCreateCommandQueueWithProperties(
+            ocl_ctx, ocl_dev, properties, &err);
+#else
+    cl_command_queue_properties properties
+            = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
+    cl_command_queue ocl_queue
+            = clCreateCommandQueue(ocl_ctx, ocl_dev, properties, &err);
+#endif
+    TEST_OCL_CHECK(err);
+
+    memory::dims dims = {2, 3, 4, 5};
+    memory::desc mem_d(dims, memory::data_type::f32, memory::format_tag::nchw);
+
+    auto eltwise_d = eltwise_forward::desc(
+            prop_kind::forward, algorithm::eltwise_relu, mem_d, 0.0f);
+    auto eltwise = eltwise_forward({eltwise_d, eng});
+
+    auto mem = ocl_interop::make_memory(
+            mem_d, eng, ocl_interop::memory_kind::buffer);
+
+    auto stream = ocl_interop::make_stream(eng, ocl_queue);
+
+    const int size = std::accumulate(dims.begin(), dims.end(),
+            (dnnl::memory::dim)1, std::multiplies<dnnl::memory::dim>());
+
+    std::vector<float> host_data_src(size);
+    for (int i = 0; i < size; i++)
+        host_data_src[i] = i - size / 2;
+
+    cl_event write_buffer_event;
+    TEST_OCL_CHECK(
+            clEnqueueWriteBuffer(ocl_queue, ocl_interop::get_mem_object(mem),
+                    /* blocking */ CL_FALSE, 0, size * sizeof(float),
+                    host_data_src.data(), 0, nullptr, &write_buffer_event));
+
+    cl_event eltwise_event = ocl_interop::execute(eltwise, stream,
+            {{DNNL_ARG_SRC, mem}, {DNNL_ARG_DST, mem}}, {write_buffer_event});
+
+    // Check results.
+    std::vector<float> host_data_dst(size, -1);
+    cl_event read_buffer_event;
+    TEST_OCL_CHECK(clEnqueueReadBuffer(ocl_queue,
+            ocl_interop::get_mem_object(mem),
+            /* blocking */ CL_FALSE, 0, size * sizeof(float),
+            host_data_dst.data(), 1, &eltwise_event, &read_buffer_event));
+    TEST_OCL_CHECK(clWaitForEvents(1, &read_buffer_event));
+
+    for (int i = 0; i < size; i++) {
+        float exp_value = (i - size / 2) <= 0 ? 0 : (i - size / 2);
+        EXPECT_EQ(host_data_dst[i], exp_value);
+    }
+
+    TEST_OCL_CHECK(clReleaseEvent(read_buffer_event));
+    TEST_OCL_CHECK(clReleaseEvent(write_buffer_event));
+    TEST_OCL_CHECK(clReleaseEvent(eltwise_event));
+    TEST_OCL_CHECK(clReleaseCommandQueue(ocl_queue));
+}
+
 } // namespace dnnl

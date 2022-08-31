@@ -111,6 +111,7 @@ status_t primitive_create(primitive_iface_t **primitive_iface,
     return safe_ptr_assign((*primitive_iface), p_iface.first);
 }
 
+// TODO: do not allow to use this API for OOO queues.
 status_t primitive_execute(
         const primitive_iface_t *primitive_iface, exec_ctx_t &ctx) {
     auto stream = ctx.stream();
@@ -220,11 +221,16 @@ status_t dnnl_primitive_execute(const primitive_iface_t *primitive_iface,
     bool is_wino
             = std::string(pd_iface->info()).find("wino") != std::string::npos;
     if (!is_wino) {
-        return sc.check(
-                dnnl::impl::primitive_execute, primitive_iface, std::ref(ctx));
+        status = dnnl::impl::primitive_execute(primitive_iface, std::ref(ctx);
+        stream->cleanup();
+        return sc.check(status);
     }
 #endif
-    return dnnl::impl::primitive_execute(primitive_iface, ctx);
+    status = dnnl::impl::primitive_execute(primitive_iface, ctx);
+    // XXX: release return event to avoid memory leak.
+    stream->cleanup();
+
+    return status;
 }
 
 status_t dnnl_primitive_get_primitive_desc(

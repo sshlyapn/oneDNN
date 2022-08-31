@@ -331,8 +331,13 @@ TEST_P(sycl_memory_buffer_test, EltwiseWithUserKernel) {
 #endif
 
     memory::dims tz = {2, 3, 4, 5};
+// <<<<<<< HEAD
     const int N = std::accumulate(tz.begin(), tz.end(), (memory::dim)1,
             std::multiplies<memory::dim>());
+// =======
+//     // TODO: fix it!!
+//     const int N = tz.size();
+// >>>>>>> 63d8e2ba4... add support for ooo queue
 
     memory::desc mem_d(tz, memory::data_type::f32, memory::format_tag::nchw);
 
