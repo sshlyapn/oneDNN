@@ -69,6 +69,12 @@ struct ocl_stream_t : public compute::compute_stream_t {
 
     const std::vector<cl_event> &get_deps() const { return events_; }
 
+    int get_sync_method() const { return sync_method_; }
+    void set_sync_method(int sync_method) { sync_method_ = sync_method; }
+
+    int get_dep_type() const { return deps_type_; }
+    void set_dep_type(int deps_type) { deps_type_ = deps_type; }
+
     status_t wait() override {
         OCL_CHECK(clFinish(queue_));
         return status::success;
@@ -124,6 +130,8 @@ private:
 private:
     cl_command_queue queue_;
     std::vector<cl_event> events_;
+    int sync_method_; // 0 - barriers, 1 - events
+    int deps_type_; // 0 - inner, 1 - outer
 };
 
 } // namespace ocl

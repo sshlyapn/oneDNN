@@ -33,7 +33,7 @@ using namespace dnnl::impl;
 status_t dnnl_ocl_interop_primitive_execute(
         const primitive_iface_t *primitive_iface, stream_t *stream, int nargs,
         const dnnl_exec_arg_t *args, const cl_event *deps, int ndeps,
-        cl_event *return_event_) {
+        cl_event *return_event_, bool use_barriers_) {
     bool ok = !utils::any_null(primitive_iface, stream)
             && primitive_iface->engine() == stream->engine()
             && primitive_iface->engine()->runtime_kind() == runtime_kind::ocl
@@ -42,11 +42,15 @@ status_t dnnl_ocl_interop_primitive_execute(
 
     auto *ocl_stream = utils::downcast<gpu::ocl::ocl_stream_t *>(stream);
 
+    ocl_stream->set_sync_method(!use_barriers_);
+
+    ocl_stream->set_dep_type(1);
+
     if (ocl_stream->flags() & stream_flags::in_order) {
         return status::invalid_arguments;
     }
 
-    if (deps != nullptr) {
+    if (ocl_stream->get_sync_method() == 1 && deps != nullptr) {
         std::vector<cl_event> events(ndeps);
         for (int i = 0; i < ndeps; i++) {
             events[i] = deps[i];
@@ -63,18 +67,22 @@ status_t dnnl_ocl_interop_primitive_execute(
     CHECK(primitive_execute(primitive_iface, ctx));
 
     // return output event
-    auto last_events = ocl_stream->get_deps();
-    if (last_events.size() != 1) {
-        assert(!"unexpected");
-        return status::runtime_error;
+    if (ocl_stream->get_sync_method() == 1) {
+        auto last_events = ocl_stream->get_deps();
+        if (last_events.size() != 1) {
+            assert(!"unexpected");
+            return status::runtime_error;
+        }
+
+        cl_event return_event = last_events[0];
+
+        if (return_event_ != nullptr)
+            *return_event_ = return_event;
+        else
+            clReleaseEvent(return_event);
     }
 
-    cl_event return_event = last_events[0];
-
-    if (return_event_ != nullptr)
-        *return_event_ = return_event;
-    else
-        clReleaseEvent(return_event);
+    ocl_stream->set_dep_type(1);
 
     return status::success;
 }
