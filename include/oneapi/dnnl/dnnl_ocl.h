@@ -173,7 +173,7 @@ dnnl_status_t DNNL_API dnnl_ocl_interop_stream_get_command_queue(
 ///     otherwise.
 dnnl_status_t DNNL_API dnnl_ocl_interop_primitive_execute(
         const_dnnl_primitive_t primitive, dnnl_stream_t stream, int nargs,
-        const dnnl_exec_arg_t *args, const cl_event *deps, int ndeps,
+        const dnnl_exec_arg_t *args, cl_event *deps, int ndeps,
         cl_event *return_event);
 
 /// @} dnnl_api_ocl_interop

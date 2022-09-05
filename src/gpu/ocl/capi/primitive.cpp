@@ -32,7 +32,7 @@ using namespace dnnl::impl;
 
 status_t dnnl_ocl_interop_primitive_execute(
         const primitive_iface_t *primitive_iface, stream_t *stream, int nargs,
-        const dnnl_exec_arg_t *args, const cl_event *deps, int ndeps,
+        const dnnl_exec_arg_t *args, cl_event *deps, int ndeps,
         cl_event *return_event_) {
     bool ok = !utils::any_null(primitive_iface, stream)
             && primitive_iface->engine() == stream->engine()
@@ -47,12 +47,16 @@ status_t dnnl_ocl_interop_primitive_execute(
     }
 
     if (deps != nullptr) {
-        std::vector<cl_event> events(ndeps);
-        for (int i = 0; i < ndeps; i++) {
-            events[i] = deps[i];
-        }
-        ocl_stream->set_deps(events);
+        // std::vector<cl_event> events(ndeps);
+        // for (int i = 0; i < ndeps; i++) {
+        //     events[i] = deps[i];
+        // }
+        // ocl_stream->set_deps(events);
+        ocl_stream->set_deps_ptr(deps);
+        ocl_stream->set_deps_num(ndeps);
     }
+
+    ocl_stream->set_return_ptr(return_event_);
 
     // run primitive
     exec_args_t exec_args;
@@ -63,18 +67,18 @@ status_t dnnl_ocl_interop_primitive_execute(
     CHECK(primitive_execute(primitive_iface, ctx));
 
     // return output event
-    auto last_events = ocl_stream->get_deps();
-    if (last_events.size() != 1) {
-        assert(!"unexpected");
-        return status::runtime_error;
-    }
+    // auto last_events = ocl_stream->get_deps();
+    // if (last_events.size() != 1) {
+    //     assert(!"unexpected");
+    //     return status::runtime_error;
+    // }
 
-    cl_event return_event = last_events[0];
+    // cl_event return_event = last_events[0];
 
-    if (return_event_ != nullptr)
-        *return_event_ = return_event;
-    else
-        clReleaseEvent(return_event);
+    // if (return_event_ != nullptr)
+    //     *return_event_ = return_event;
+    // else
+    //     clReleaseEvent(return_event);
 
     return status::success;
 }

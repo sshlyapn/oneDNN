@@ -67,6 +67,33 @@ struct ocl_stream_t : public compute::compute_stream_t {
         return status::success;
     }
 
+    status_t set_deps_ptr(cl_event* events) {
+        events_ptr_ = events;
+        return status::success;
+    }
+
+    cl_event* get_deps_ptr() {
+        return events_ptr_;
+    }
+
+    status_t set_deps_num(int num) {
+        deps_num_ = num;
+        return status::success;
+    }
+
+    int get_deps_num() {
+        return deps_num_;
+    }
+
+    status_t set_return_ptr(cl_event* event) {
+        return_event_ptr_ = event;
+        return status::success;
+    }
+
+    cl_event* get_return_ptr() {
+        return return_event_ptr_;
+    }
+
     const std::vector<cl_event> &get_deps() const { return events_; }
 
     status_t wait() override {
@@ -124,6 +151,9 @@ private:
 private:
     cl_command_queue queue_;
     std::vector<cl_event> events_;
+    cl_event* events_ptr_;
+    cl_event* return_event_ptr_;
+    int deps_num_;
 };
 
 } // namespace ocl
